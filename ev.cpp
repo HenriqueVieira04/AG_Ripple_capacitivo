@@ -23,6 +23,8 @@ double qtdpassos = 2000; // = periodo/dx
 double passorad = M_PI / qtdpassos; // = dx
 double passosec = 1 / (qtdpassos * F); // = incremento do tempo em que estamos em determinado passo
 
+
+//porcentagem minima desejada de ripple
 float percent_min_taget = 0.1;
 
 double ripple_target = Vs / (1 + percent_min_taget);
