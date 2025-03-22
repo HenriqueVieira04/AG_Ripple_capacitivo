@@ -5,6 +5,8 @@
 #include <vector>
 #include <GL/glut.h>
 
+
+//criando os randomizadores usando mt19937 
 using namespace std;
 random_device rd1;
 random_device rd2;
