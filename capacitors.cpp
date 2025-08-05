@@ -74,4 +74,6 @@ vector<tuple<double, float>> initCaps(){
     caps.push_back(make_tuple(7.5e-3f, 5.55));
     caps.push_back(make_tuple(7.6e-3f, 2.80));
     caps.push_back(make_tuple(1.0e-2f, 4.48));
+
+    return caps;
 }

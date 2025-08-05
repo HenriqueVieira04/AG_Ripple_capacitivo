@@ -1,9 +1,10 @@
-#include <iostream>
+#include "capacitors.cpp"
 #include <cmath>
 #include <random>
 #include <algorithm>
-#include <vector>
 #include <GL/glut.h>
+#include <tuple>
+#include <vector>
 
 //criando os randomizadores usando mt19937 
 using namespace std;
@@ -13,8 +14,8 @@ mt19937 gen1(rd1());
 mt19937 gen2(rd2());
 
 // variaveis gerais de simulação
-double Vs = 120.0; // Tensao da fonte
-double R = 10.0; // Resistencia do circuito dada pelo usuario
+double Vs = 24.0; // Tensao da fonte
+double R = 1.0; // Resistencia do circuito dada pelo usuario
 // Capaciatancia é dada em uF ou seja, precisa de pow(10, -6);
 double F = 120; // Frequencia de onsilação retiificada
 
@@ -38,22 +39,7 @@ bool nearlyEqual(float a, float b, float epsilon = 1e-5f) {
     return fabs(a - b) < epsilon;
 }
 
-
-
-vector<float> e24_values = { 
-    1.0e-6f, 1.1e-6f, 1.2e-6f, 1.3e-6f, 1.5e-6f, 1.6e-6f, 1.8e-6f, 2.0e-6f, 2.2e-6f, 2.4e-6f, 2.7e-6f, 3.0e-6f, 
-    3.3e-6f, 3.6e-6f, 3.9e-6f, 4.3e-6f, 4.7e-6f, 5.1e-6f, 5.6e-6f, 6.2e-6f, 6.8e-6f, 7.5e-6f, 8.2e-6f, 9.1e-6f, 
-    1.0e-5f, 1.1e-5f, 1.2e-5f, 1.3e-5f, 1.5e-5f, 1.6e-5f, 1.8e-5f, 2.0e-5f, 2.2e-5f, 2.4e-5f, 2.7e-5f, 3.0e-5f, 
-    3.3e-5f, 3.6e-5f, 3.9e-5f, 4.3e-5f, 4.7e-5f, 5.1e-5f, 5.6e-5f, 6.2e-5f, 6.8e-5f, 7.5e-5f, 8.2e-5f, 9.1e-5f, 
-    1.0e-4f, 1.1e-4f, 1.2e-4f, 1.3e-4f, 1.5e-4f, 1.6e-4f, 1.8e-4f, 2.0e-4f, 2.2e-4f, 2.4e-4f, 2.7e-4f, 3.0e-4f, 
-    3.3e-4f, 3.6e-4f, 3.9e-4f, 4.3e-4f, 4.7e-4f, 5.1e-4f, 5.6e-4f, 6.2e-4f, 6.8e-4f, 7.5e-4f, 8.2e-4f, 9.1e-4f, 
-    1.0e-3f, 1.1e-3f, 1.2e-3f, 1.3e-3f, 1.5e-3f, 1.6e-3f, 1.8e-3f, 2.0e-3f, 2.2e-3f, 2.4e-3f, 2.7e-3f, 3.0e-3f, 
-    3.3e-3f, 3.6e-3f, 3.9e-3f, 4.3e-3f, 4.7e-3f, 5.1e-3f, 5.6e-3f, 6.2e-3f, 6.8e-3f, 7.5e-3f, 8.2e-3f, 9.1e-3f, 
-    1.0e-2f, 1.1e-2f, 1.2e-2f, 1.3e-2f, 1.5e-2f, 1.6e-2f, 1.8e-2f, 2.0e-2f, 2.2e-2f, 2.4e-2f, 2.7e-2f, 3.0e-2f, 
-    3.3e-2f, 3.6e-2f, 3.9e-2f, 4.3e-2f, 4.7e-2f, 5.1e-2f, 5.6e-2f, 6.2e-2f, 6.8e-2f, 7.5e-2f, 8.2e-2f, 9.1e-2f, 
-    1.0e-1f, 1.1e-1f, 1.2e-1f, 1.3e-1f, 1.5e-1f, 1.6e-1f, 1.8e-1f, 2.0e-1f, 2.2e-1f, 2.4e-1f, 2.7e-1f, 3.0e-1f, 
-    3.3e-1f, 3.6e-1f, 3.9e-1f, 4.3e-1f, 4.7e-1f, 5.1e-1f, 5.6e-1f
-};
+vector<tuple<double, float>> caps = initCaps();
 
 
 int nextQtd(int qtd, double mutation_qtd){
@@ -62,10 +48,10 @@ int nextQtd(int qtd, double mutation_qtd){
     return clamp(newQtd, 1, 6);
 }
 
-vector<float> nextArr(int qtd, const vector<int>& oldarray, float mutation_arr){
-    vector<float> new_array(qtd);
+vector<tuple<double, float>> nextArr(int qtd, const vector<int>& oldarray, float mutation_arr){
+    vector<tuple<double, float>> new_array(qtd);
     int newindex = 0;
-    uniform_int_distribution<> distribUniform(0, 139); // Para gerar índices aleatórios
+    uniform_int_distribution<> distribUniform(0, caps.size() - 1); // Para gerar índices aleatórios
 
     for(int cont = 0; cont < qtd; cont++){
         int old_index;
@@ -79,21 +65,21 @@ vector<float> nextArr(int qtd, const vector<int>& oldarray, float mutation_arr){
 
         normal_distribution<> distribNormal2(old_index, mutation_arr);
         newindex = distribNormal2(gen2);
-        newindex = clamp(newindex, 0, 139);
-        new_array[cont] = e24_values[newindex];
+        newindex = clamp(newindex, 0, (int)caps.size() - 1);
+        new_array[cont] = caps[newindex];
     }
     return new_array;
 }
 
-float sumcap(const vector<float>& arr){
+float sumcap(const vector<tuple<double, float>>& arr){
     float sum = 0;
-    for(float val : arr){
-        sum += val;
+    for(const auto& val : arr){
+        sum += get<0>(val);
     }
     return sum;
 }
 
-double findW(const vector<float>& arr) {
+double findW(const vector<tuple<double, float>>& arr) {
     double w = 0;
     double C = sumcap(arr);
     double exp_value, sin_value;
@@ -130,7 +116,7 @@ double calcvy(double taux, double C, int cont) {
         return sin_value;
 }
 
-double find_Vmed(double w, const vector<float>& arr){
+double find_Vmed(double w, const vector<tuple<double, float>>& arr){
     double integral_acum = 0;
     double it_sec = 0;
     double C = sumcap(arr);
@@ -153,8 +139,8 @@ double find_Vmed(double w, const vector<float>& arr){
 class Cenario{
     public:
         int qtd_cap;
-        int price = 0;
-        vector<float> cap_array;
+        float price = 0;
+        vector<tuple<double, float>> cap_array;
         float score;
         float Ctotal;
 
@@ -163,7 +149,7 @@ class Cenario{
         double Vcut;
 
     public: 
-        Cenario(int qtd, const vector<float>& arr){
+        Cenario(int qtd, const vector<tuple<double, float>>& arr){
             qtd_cap = qtd;
             cap_array = arr;
             w = findW(cap_array);
@@ -174,41 +160,27 @@ class Cenario{
             Ctotal = sumcap(cap_array);
         }
         
-        int search_for_it(float value) {
-            int cont; 
-            for (cont = 0; cont < e24_values.size(); cont++) {
-                if (nearlyEqual(e24_values[cont], value)) {
-                    break;
-                }
-            }
-            if (cont < e24_values.size()) {
-                return (cont / 14 + 1);
-            }
-            std :: cout << "n achei" <<std::endl;
-            return -1; // Caso não encontre o valor
-        }
-        
-
         float avl_fitness(){ //int qtd, float* arr
             return (ripple_target-Vcut)/price;
         }
 
-        int cap_Price(){ //int qtd, float* arr
-            int price_aux = 0;
+        float cap_Price(){ //int qtd, float* arr
+            float price_aux = 0;
             for(int cont = 0; cont < qtd_cap; cont++) 
-                price_aux += search_for_it(cap_array[cont]);
+                price_aux += get<1>(cap_array[cont]);
             return price_aux;
         }
 
         ~Cenario(){}
 
-        vector<int> indexs(int qtd, const vector<float>& oldarray) {
+        vector<int> indexs() {
             vector<int> indices;
-            indices.reserve(oldarray.size());
-            for (int i = 0; i < oldarray.size(); ++i) {
+            indices.reserve(cap_array.size());
+            for (const auto& cap_tuple : cap_array) {
+                double target_cap_value = get<0>(cap_tuple);
                 int idx = -1;
-                for (int j = 0; j < e24_values.size(); ++j) {
-                    if (e24_values[j] == oldarray[i]) {
+                for (int j = 0; j < caps.size(); ++j) {
+                    if (nearlyEqual(get<0>(caps[j]), target_cap_value)) {
                         idx = j;
                         break;
                     }
@@ -219,13 +191,14 @@ class Cenario{
         }
 
         Cenario Evolve(){
-            Cenario cen_new(nextQtd(qtd_cap, mutation_qtd), nextArr(qtd_cap, indexs(qtd_cap, cap_array), mutation_arr));
+            int new_qtd = nextQtd(qtd_cap, mutation_qtd);
+            Cenario cen_new(new_qtd, nextArr(new_qtd, indexs(), mutation_arr));
             return cen_new;
         }
     
 };
 
-Cenario best_cenario(1, vector<float>(1, 1.0e-4f));
+Cenario best_cenario(1, {make_tuple(1.0e-4f, 0.15f)});
 vector<Cenario> cenarios; //cria um vetor de cenarios
 
 float generate_wave = 10; // geracao dos periodos de onda na GUI
@@ -295,8 +268,6 @@ void tela() {
         }
     }
 
-    // --- Etapa 2: Desenhar a onda completa de uma só vez ---
-
     // Desenha a linha contínua que conecta todos os pontos
     glBegin(GL_LINE_STRIP);
     glColor3f(1.0, 1.0, 1.0); // Cor branca para a onda
@@ -358,6 +329,13 @@ void tela() {
     renderBitmapString(0.1, best_cenario.Vcut, GLUT_BITMAP_HELVETICA_12, ("Vcorte: " + std::to_string(best_cenario.Vcut)+"V").c_str());
     renderBitmapString(0.1, Vs, GLUT_BITMAP_HELVETICA_12, ("Vmax: " + std::to_string(Vs)+"V").c_str());
 
+    // Exibe os pesos de mutação no canto superior direito
+    /*
+    string mutation_arr_str = "Mutation Arr: " + std::to_string(mutation_arr);
+    string mutation_qtd_str = "Mutation Qtd: " + std::to_string(mutation_qtd);
+    renderBitmapString(8 * M_PI * zoomFactor + scrollX, 1.4 * zoomFactor + scrollY, GLUT_BITMAP_HELVETICA_12, mutation_arr_str.c_str());
+    renderBitmapString(8 * M_PI * zoomFactor + scrollX, 1.3 * zoomFactor + scrollY, GLUT_BITMAP_HELVETICA_12, mutation_qtd_str.c_str());
+    */
     glFlush();
 }
 
@@ -457,25 +435,29 @@ void teclado(unsigned char key, int x, int y) {
             std::cout << "Lock: " << lock << std::endl;
             if(lock == false){
                 for(int cont = 0; cont < best_cenario.qtd_cap; cont++){
-                    std::cout << "Capacitor " << cont << ": " << best_cenario.cap_array[cont] << std::endl;
+                    std::cout << "Capacitor " << cont << ": " << get<0>(best_cenario.cap_array[cont]) << "F, R$" << get<1>(best_cenario.cap_array[cont]) << std::endl;
                 }
             }             
             break;
         case 'm':
             mutation_arr *=1.05;
             std::cout << "mutation_arr: " << mutation_arr << std::endl; 
+            glutPostRedisplay();
             break;
         case 'n':
             mutation_arr /=1.05;
             std::cout << "mutation_arr: " << mutation_arr << std::endl;
+            glutPostRedisplay();
             break;
         case 'p':
             mutation_qtd *=1.05;
             std::cout << "mutation_qtd: " << mutation_qtd << std::endl;
+            glutPostRedisplay();
             break;
         case 'o':
             mutation_qtd /=1.05;
             std::cout << "mutation_qtd: " << mutation_qtd << std::endl;
+            glutPostRedisplay();
             break;
         case 'f': // Tecla para auto-ajuste
             autoFitView();
@@ -515,7 +497,7 @@ int main(int argc, char** argv) {
         qtdaux = nextQtd(3, mutation_qtd); 
         cenarios.push_back(Cenario(
             qtdaux, 
-            nextArr(qtdaux, vector<int>(qtdaux, 70), mutation_arr) //preenche a população com vectors contendo elementos ja alatorizados
+            nextArr(qtdaux, vector<int>(), mutation_arr) //preenche a população com vectors contendo elementos ja alatorizados
         ));
     }
 
