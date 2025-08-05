@@ -14,8 +14,8 @@ mt19937 gen1(rd1());
 mt19937 gen2(rd2());
 
 // variaveis gerais de simulação
-double Vs = 24.0; // Tensao da fonte
-double R = 1.0; // Resistencia do circuito dada pelo usuario
+double Vs = 127.0; // Tensao da fonte
+double R = 250.0; // Resistencia do circuito dada pelo usuario
 // Capaciatancia é dada em uF ou seja, precisa de pow(10, -6);
 double F = 120; // Frequencia de onsilação retiificada
 
@@ -236,62 +236,70 @@ void init() {
 
 void tela() {
     glClear(GL_COLOR_BUFFER_BIT);
+    
+    // --- Desenho da Cena (Onda, Eixos, etc.) ---
+    glPushMatrix(); // Salva a matriz atual
     glLoadIdentity();
     glTranslatef(-scrollX, -scrollY, 0.0f);
 
-    // --- Etapa 1: Calcular todos os vértices da onda e armazenar em um vetor ---
+    // ... (código para calcular e desenhar a onda, eixos, etc. permanece o mesmo) ...
     std::vector<std::pair<double, double>> wave_vertices;
-
-    // Adiciona o primeiro segmento da onda (senoide inicial)
     for (double p1 = 0; p1 <= M_PI / 2; p1 += passorad) {
         wave_vertices.push_back({p1, Vs * sin(p1)});
     }
-
-    // Adiciona os períodos de ripple
     for (int k = 0; k < generate_wave; k++) {     
         double taux = 0;
         int cont = 0;
-        
-        // Parte da descarga do capacitor (curva exponencial)
         for (double p2 = (M_PI / 2) + k * M_PI; p2 <= (M_PI + best_cenario.w) + k * M_PI; p2 += passorad) {
             double valuey = calcvy(taux, best_cenario.Ctotal, cont);
             wave_vertices.push_back({p2, valuey});
             cont++;
             taux += passosec;
         }
-        
-        // Parte da recarga (curva senoidal)
         double start = (M_PI + best_cenario.w) + k * M_PI;
         double end = (1.5 * M_PI) + k * M_PI;
         for (double p3 = start; p3 <= end; p3 += passorad) {
             wave_vertices.push_back({p3, Vs * fabs(sin(p3))});
         }
     }
-
-    // Desenha a linha contínua que conecta todos os pontos
     glBegin(GL_LINE_STRIP);
-    glColor3f(1.0, 1.0, 1.0); // Cor branca para a onda
+    glColor3f(1.0, 1.0, 1.0);
     for (const auto& vertex : wave_vertices) {
         glVertex2d(vertex.first, vertex.second);
     }
     glEnd();
-
-    // Desenha os pontos individuais para visualização
-    glPointSize(3.0f); // Define o tamanho dos pontos
+    glPointSize(3.0f);
     glBegin(GL_POINTS);
-    glColor3f(0.0, 1.0, 1.0); // Cor ciano para os pontos, para destacá-los
+    glColor3f(0.0, 1.0, 1.0);
     for (const auto& vertex : wave_vertices) {
         glVertex2d(vertex.first, vertex.second);
     }
     glEnd();
-
-
-    // Desenha as marcações de PI no eixo X
     for (int k = 0; k < generate_wave; k++) {
         renderBitmapString(k*M_PI-0.15, -0.1, GLUT_BITMAP_HELVETICA_12, (std::to_string(k)+"pi").c_str());
         renderBitmapString(k*M_PI+M_PI/2-0.35, -0.1, GLUT_BITMAP_HELVETICA_12, (std::to_string(((int)k)*2+1)+"/2 pi").c_str());
     }
+    glBegin(GL_LINES);
+    glColor3f(1.0, 0.0, 0.0); 
+    glVertex2f(-5 * generate_wave, 0.0);
+    glVertex2f(5 * generate_wave, 0.0);
+    glColor3f(0.5, 0.0, 0.5);
+    glVertex2f(-5 * generate_wave, Vs);
+    glVertex2f(5 * generate_wave, Vs);
+    glColor3f(0.0, 1.0, 0.0);
+    glVertex2f(-5 * generate_wave, best_cenario.Vmed);
+    glVertex2f(5 * generate_wave, best_cenario.Vmed);
+    glColor3f(1.0, 1.0, 0.0);
+    glVertex2f(-5 * generate_wave, best_cenario.Vcut);
+    glVertex2f(5 * generate_wave, best_cenario.Vcut);
+    glColor3f(1.0, 0.0, 0.0);
+    glVertex2f(0.0, (-2 * Vs - M_PI * conts));
+    glVertex2f(0.0, (2 * Vs + M_PI * contw));
+    glEnd();
+    
+    glPopMatrix(); // Restaura a matriz para o estado antes da translação
 
+    // --- Desenho do HUD (Textos fixos) ---
     if (aux_drawlines == 0) {
         std::cout << "Tensão média do circuito: " << best_cenario.Vmed << "V" << std::endl;
         std::cout << "Tensão minima para corte: " << best_cenario.Vcut << "V" << std::endl;
@@ -299,43 +307,29 @@ void tela() {
         aux_drawlines++;
     }
 
-
-    // Linha da tensão média
-    glBegin(GL_LINES);
-    glColor3f(1.0, 0.0, 0.0); // Cor vermelha para o eixo X
-    glVertex2f(-5 * generate_wave, 0.0);
-    glVertex2f(5 * generate_wave, 0.0);
-
-    glColor3f(0.5, 0.0, 0.5);
-    glVertex2f(-5 * generate_wave, Vs);
-    glVertex2f(5 * generate_wave, Vs);
-
-    glColor3f(0.0, 1.0, 0.0);
-    glVertex2f(-5 * generate_wave, best_cenario.Vmed);
-    glVertex2f(5 * generate_wave, best_cenario.Vmed);
-
-    glColor3f(1.0, 1.0, 0.0);
-    glVertex2f(-5 * generate_wave, best_cenario.Vcut);
-    glVertex2f(5 * generate_wave, best_cenario.Vcut);
-
-    glColor3f(1.0, 0.0, 0.0); // Cor vermelha para o eixo Y
-    glVertex2f(0.0, (-2 * Vs - M_PI * conts));
-    glVertex2f(0.0, (2 * Vs + M_PI * contw));
-    glEnd();
-    
-
     glColor3f(1.0, 1.0, 1.0); // Cor branca para o texto
-    renderBitmapString(0.1, best_cenario.Vmed, GLUT_BITMAP_HELVETICA_12, ("Vmed: " + std::to_string(best_cenario.Vmed)+"V").c_str());
-    renderBitmapString(0.1, best_cenario.Vcut, GLUT_BITMAP_HELVETICA_12, ("Vcorte: " + std::to_string(best_cenario.Vcut)+"V").c_str());
-    renderBitmapString(0.1, Vs, GLUT_BITMAP_HELVETICA_12, ("Vmax: " + std::to_string(Vs)+"V").c_str());
+    
+    // Obtém as coordenadas atuais da projeção
+    GLfloat projMatrix[16];
+    glGetFloatv(GL_PROJECTION_MATRIX, projMatrix);
+    
+    // Para gluOrtho2D(left, right, bottom, top)
+    float left = -(projMatrix[12] + 1) / projMatrix[0];
+    float right = (1 - projMatrix[12]) / projMatrix[0];
+    float bottom = -(projMatrix[13] + 1) / projMatrix[5];
+    float top = (1 - projMatrix[13]) / projMatrix[5];
 
-    // Exibe os pesos de mutação no canto superior direito
-    /*
+    // Renderiza os textos de Vmed, Vcut, Vmax no canto inferior esquerdo
+    renderBitmapString(left + (right - left) * 0.02, bottom + (top - bottom) * 0.15, GLUT_BITMAP_HELVETICA_12, ("Vmed: " + std::to_string(best_cenario.Vmed)+"V").c_str());
+    renderBitmapString(left + (right - left) * 0.02, bottom + (top - bottom) * 0.10, GLUT_BITMAP_HELVETICA_12, ("Vcorte: " + std::to_string(best_cenario.Vcut)+"V").c_str());
+    renderBitmapString(left + (right - left) * 0.02, bottom + (top - bottom) * 0.05, GLUT_BITMAP_HELVETICA_12, ("Vmax: " + std::to_string(Vs)+"V").c_str());
+
+    // Exibe os pesos de mutação no canto superior esquerdo
     string mutation_arr_str = "Mutation Arr: " + std::to_string(mutation_arr);
     string mutation_qtd_str = "Mutation Qtd: " + std::to_string(mutation_qtd);
-    renderBitmapString(8 * M_PI * zoomFactor + scrollX, 1.4 * zoomFactor + scrollY, GLUT_BITMAP_HELVETICA_12, mutation_arr_str.c_str());
-    renderBitmapString(8 * M_PI * zoomFactor + scrollX, 1.3 * zoomFactor + scrollY, GLUT_BITMAP_HELVETICA_12, mutation_qtd_str.c_str());
-    */
+    renderBitmapString(left + (right - left) * 0.02, top - (top - bottom) * 0.05, GLUT_BITMAP_HELVETICA_12, mutation_arr_str.c_str());
+    renderBitmapString(left + (right - left) * 0.02, top - (top - bottom) * 0.10, GLUT_BITMAP_HELVETICA_12, mutation_qtd_str.c_str());
+    
     glFlush();
 }
 
@@ -435,7 +429,7 @@ void teclado(unsigned char key, int x, int y) {
             std::cout << "Lock: " << lock << std::endl;
             if(lock == false){
                 for(int cont = 0; cont < best_cenario.qtd_cap; cont++){
-                    std::cout << "Capacitor " << cont << ": " << get<0>(best_cenario.cap_array[cont]) << "F, R$" << get<1>(best_cenario.cap_array[cont]) << std::endl;
+                    std::cout << "Capacitor " << cont+1 << ": " << get<0>(best_cenario.cap_array[cont]) << "F, R$" << get<1>(best_cenario.cap_array[cont]) << std::endl;
                 }
             }             
             break;

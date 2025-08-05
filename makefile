@@ -5,4 +5,4 @@ run:
 	./evolutives
 
 clean:
-	rm -f evolutives
+	rm -f evolutives 
