@@ -1,0 +1,1 @@
+g++ -o ev ev.cpp -lGL -lglut -lGLU
