@@ -19,7 +19,7 @@ sudo apt-get install build-essential freeglut3-dev
 
 Para compilar, utilize o makefile fornecido:
 ```bash
-make
+make all
 ```
 
 Para executar o programa:
