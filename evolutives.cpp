@@ -14,18 +14,19 @@ mt19937 gen1(rd1());
 mt19937 gen2(rd2());
 
 // variaveis gerais de simulação
-double Vs = 127.0; // Tensao da fonte
-double R = 250.0; // Resistencia do circuito dada pelo usuario
+double Vs = 36.0; // Tensao da fonte
+double R = 10.0; // Resistencia do circuito dada pelo usuario
+
 // Capaciatancia é dada em uF ou seja, precisa de pow(10, -6);
-double F = 120; // Frequencia de onsilação retiificada
+
+double F = 120; // Frequencia de oscilação retiificada
 
 double qtdpassos = 2000; // = periodo/dx
 double passorad = M_PI / qtdpassos; // = dx
 double passosec = 1 / (qtdpassos * F); // = incremento do tempo em que estamos em determinado passo
 
-
 //porcentagem minima desejada de ripple
-float percent_min_taget = 0.1;
+float percent_min_taget = 0.029;
 
 double ripple_target = Vs / (1 + percent_min_taget);
 
@@ -40,7 +41,6 @@ bool nearlyEqual(float a, float b, float epsilon = 1e-5f) {
 }
 
 vector<tuple<double, float>> caps = initCaps();
-
 
 int nextQtd(int qtd, double mutation_qtd){
     normal_distribution<> distribNormal1(qtd, mutation_qtd);
@@ -99,6 +99,7 @@ double findW(const vector<tuple<double, float>>& arr) {
     return w;
 }
 
+// Integração numerica usando o metodo trapezoidal
 double integrateTrapezoid_senoid(double (*func)(double), double start, double end, double step) {
     double sum_of_parts = 0;
     for (double x = start; x < end; x += step) {
@@ -107,7 +108,8 @@ double integrateTrapezoid_senoid(double (*func)(double), double start, double en
     return sum_of_parts;
 }
 
-double calcvy(double taux, double C, int cont) {
+// Calcula o Y baseado no ponto presente da onda
+double calcvy(double taux, double C, int cont) { 
     double exp_value = Vs * exp((-1 * taux) / (R * C));
     double sin_value = Vs * sin((M_PI / 2) - (cont * passorad));
     if (exp_value > sin_value)
@@ -116,6 +118,7 @@ double calcvy(double taux, double C, int cont) {
         return sin_value;
 }
 
+// função para encontrar a tensão media oferecida pelo circuito
 double find_Vmed(double w, const vector<tuple<double, float>>& arr){
     double integral_acum = 0;
     double it_sec = 0;
@@ -129,13 +132,13 @@ double find_Vmed(double w, const vector<tuple<double, float>>& arr){
     }
 
 
-    for(;w < 0.5*M_PI; w+=passorad) //integral da parte do ripple
+    for(;w < 0.5*M_PI; w+=passorad) //integral da parte referente a subida da onda
         integral_acum += Vs * fabs(sin(w)) * (passorad);
 
     return integral_acum/M_PI;
 } 
 
-
+// classe cenario que contem o array de capacitores e todos os valores numericos advindos das escolhas
 class Cenario{
     public:
         int qtd_cap;
@@ -173,7 +176,7 @@ class Cenario{
 
         ~Cenario(){}
 
-        vector<int> indexs() {
+        vector<int> indexs() { // encontra os indices presentes no cenario dentro da lista de capacitores
             vector<int> indices;
             indices.reserve(cap_array.size());
             for (const auto& cap_tuple : cap_array) {
@@ -190,7 +193,7 @@ class Cenario{
             return indices;
         }
 
-        Cenario Evolve(){
+        Cenario Evolve(){ // funcao que realiza a evolução baseado em um cenario pai
             int new_qtd = nextQtd(qtd_cap, mutation_qtd);
             Cenario cen_new(new_qtd, nextArr(new_qtd, indexs(), mutation_arr));
             return cen_new;
@@ -207,7 +210,7 @@ float zoomFactor = 1.0f; // fator de zoom default
 // Variáveis de controle de rolagem
 float scrollX = 0.0f; 
 float scrollY = 0.0f; 
-float scrollSpeed = 0.1f; // Velocidade de rolagem
+float scrollSpeed = 1.0f; // Velocidade de rolagem
 
 int scrollcount = 0; // quantidade de rolagem para geração de ondas
 int aux_drawlines = 0;
@@ -237,12 +240,12 @@ void init() {
 void tela() {
     glClear(GL_COLOR_BUFFER_BIT);
     
-    // --- Desenho da Cena (Onda, Eixos, etc.) ---
+    // Desenho do plano cartesiano e seu conteudo
     glPushMatrix(); // Salva a matriz atual
     glLoadIdentity();
     glTranslatef(-scrollX, -scrollY, 0.0f);
 
-    // ... (código para calcular e desenhar a onda, eixos, etc. permanece o mesmo) ...
+    // desenho da onda
     std::vector<std::pair<double, double>> wave_vertices;
     for (double p1 = 0; p1 <= M_PI / 2; p1 += passorad) {
         wave_vertices.push_back({p1, Vs * sin(p1)});
@@ -299,7 +302,7 @@ void tela() {
     
     glPopMatrix(); // Restaura a matriz para o estado antes da translação
 
-    // --- Desenho do HUD (Textos fixos) ---
+    // Desenho do HUD
     if (aux_drawlines == 0) {
         std::cout << "Tensão média do circuito: " << best_cenario.Vmed << "V" << std::endl;
         std::cout << "Tensão minima para corte: " << best_cenario.Vcut << "V" << std::endl;
@@ -349,6 +352,7 @@ void zoomOut() {
     glutPostRedisplay();
 }
 
+// função de foco acionada pelo comando "f", ajusta a onda para ocupar a tela inteira
 void autoFitView() {
     // Calcula os limites da onda no eixo X
     float x_min = 0.0f;
@@ -377,6 +381,7 @@ void autoFitView() {
     glutPostRedisplay();
 }
 
+// função responsavel pelos comandos acionados via teclado
 void teclado(unsigned char key, int x, int y) {
     switch (key) {
         case '+':
@@ -429,7 +434,7 @@ void teclado(unsigned char key, int x, int y) {
             std::cout << "Lock: " << lock << std::endl;
             if(lock == false){
                 for(int cont = 0; cont < best_cenario.qtd_cap; cont++){
-                    std::cout << "Capacitor " << cont+1 << ": " << get<0>(best_cenario.cap_array[cont]) << "F, R$" << get<1>(best_cenario.cap_array[cont]) << std::endl;
+                    std::cout << "Capacitor " << cont+1 << ": " << get<0>(best_cenario.cap_array[cont]) << "F, $" << get<1>(best_cenario.cap_array[cont]) << std::endl;
                 }
             }             
             break;
